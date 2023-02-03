@@ -1,8 +1,8 @@
 import 'package:cafeposlite/services/demodataservice.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:cafeposlite/models/modelpackages.dart';
 import 'package:intl/intl.dart';
+import 'package:cafeposlite/models/modelpackages.dart';
 
 
 class InvoiceView extends StatefulWidget {
@@ -13,6 +13,11 @@ class InvoiceView extends StatefulWidget {
 }
 
 class _InvoiceViewState extends State<InvoiceView> {
+
+   int? totalQty;
+   double? totalAmount;
+   Future<List<SaleDet>>? saleItems;
+
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -34,32 +39,34 @@ class _InvoiceViewState extends State<InvoiceView> {
                 ),
                 Expanded(child:
                 FutureBuilder(
-                  future: DemoDataService().getDemoInvoiceData(),
+                  future: initializeData(),
                   builder: (context,snapshot)
                   {
                     if(snapshot.hasData)
                       {
-                        return  DataTable(
-                          showBottomBorder: true,
-                          dataTextStyle: const TextStyle(color: Color(0xFF001522),fontSize: 11,fontWeight: FontWeight.w600),
-                          headingTextStyle: const TextStyle(color: Color(0xFF0D6BF2),fontSize: 13, fontWeight: FontWeight.w700),
-                          headingRowHeight: 40,
-                          dividerThickness: .6,
-                          columns:const [
-                            DataColumn(label: Text('Sr')),
-                            DataColumn(label: Text('Description')),
-                            DataColumn(label: Text('Amount')),
-                            DataColumn(label: Text('')),
-                          ],
-                          rows: snapshot.data!.map((item) =>
-                              DataRow(cells: [
-                                DataCell(Text(item.sr.toString())),
-                                DataCell(Text('${item.description} x ${item.unitQty}')),
-                                DataCell(Text(NumberFormat.currency(locale: 'en-US',symbol: '',decimalDigits: 0).format(item.amount))),
-                                DataCell(IconButton(onPressed: (){}, splashRadius: 20, icon: const Icon(Icons.delete_rounded,color: Colors.red,size: 18,))),
-                              ])
-                          ).toList(),
+                         return SingleChildScrollView(
+                          child: DataTable(
+                            showBottomBorder: true,
+                            dataTextStyle: const TextStyle(color: Color(0xFF001522),fontSize: 11,fontWeight: FontWeight.w600),
+                            headingTextStyle: const TextStyle(color: Color(0xFF0D6BF2),fontSize: 13, fontWeight: FontWeight.w700),
+                            headingRowHeight: 40,
+                            dividerThickness: .6,
+                            columns:const [
+                              DataColumn(label: Text('Sr')),
+                              DataColumn(label: Text('Description')),
+                              DataColumn(label: Text('Amount')),
+                              DataColumn(label: Text('')),
+                            ],
+                            rows: snapshot.data!.map((item) =>
+                                DataRow(cells: [
+                                  DataCell(Text(item.sr.toString())),
+                                  DataCell(Text('${item.description} x ${item.unitQty}')),
+                                  DataCell(Text(NumberFormat.currency(locale: 'en-US',symbol: '',decimalDigits: 0).format(item.amount))),
+                                  DataCell(IconButton(onPressed: (){}, splashRadius: 20, icon: const Icon(Icons.delete_rounded,color: Colors.red,size: 18,))),
+                                ])
+                            ).toList(),
 
+                          ),
                         );
                       }
 
@@ -82,16 +89,20 @@ class _InvoiceViewState extends State<InvoiceView> {
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Row(children: const [
-                            Text('Total Qty',style: TextStyle(fontSize:20,fontWeight: FontWeight.w600),),
-                            Spacer(),
-                            Text('10',style :TextStyle(fontSize: 23,fontWeight: FontWeight.w600))
+                          Row(children:  [
+                            const Text('Total Qty',style: TextStyle(fontSize:20,fontWeight: FontWeight.w600),),
+                            const Spacer(),
+                            Text(
+                                NumberFormat.currency(locale: 'en-US',symbol: '',decimalDigits: 0).format(totalQty??0),
+                                style :const TextStyle(fontSize: 23,fontWeight: FontWeight.w600))
                           ],),
                           const SizedBox(height: 20,),
-                          Row(children: const [
-                            Text('Total Amount',style: TextStyle(fontSize:20,fontWeight: FontWeight.w600),),
-                            Spacer(),
-                            Text('45,000',style :TextStyle(fontSize: 23,fontWeight: FontWeight.w600))
+                          Row(children: [
+                           const Text('Total Amount',style: TextStyle(fontSize:20,fontWeight: FontWeight.w600),),
+                            const Spacer(),
+                            Text(
+                                NumberFormat.currency(locale: 'en-US',symbol: '',decimalDigits: 0).format(totalAmount??0),
+                                style :const TextStyle(fontSize: 23,fontWeight: FontWeight.w600))
                           ],)
                         ],
                       ),
@@ -121,5 +132,30 @@ class _InvoiceViewState extends State<InvoiceView> {
          )
       ],
     );
+  }
+
+  Future<List<SaleDet>>? initializeData()
+  {
+   saleItems = DemoDataService().getDemoInvoiceData();
+   saleItems?.then((items) =>{
+     calculateSummary(items)
+   });
+    return saleItems;
+  }
+
+  void calculateSummary(List<SaleDet> saleDetItems)
+  {
+    int tmpTotalQty  = 0 ;
+    double tmpTotalAmount = 0;
+      saleDetItems.map((e) =>
+      {
+        tmpTotalQty = ((tmpTotalQty)! + e.unitQty)!,
+        tmpTotalAmount = ((tmpTotalAmount)! + (e.amount!))!
+      }).toList();
+
+      setState(() {
+        totalQty = tmpTotalQty;
+        totalAmount = tmpTotalAmount;
+      });
   }
 }
